@@ -1,0 +1,53 @@
+data/
+.env
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Model checkpoints
+mcq_model/
+checkpoints/
+checkpoint-*/
+
+# Hugging Face cache
+cache/
+.huggingface/
+
+# TensorBoard / logs
+logs/
+runs/
+events.out.tfevents*
+
+# Weights & Biases
+wandb/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Outputs
+submission.csv
+predictions.csv
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# PyTorch
+*.pt
+*.pth
+*.bin
+*.ckpt
+
+# Misc
+*.swp
