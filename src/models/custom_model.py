@@ -53,8 +53,10 @@ class TransformerEncoder(nn.Module):
         return self.dropout(x)
 
 class MCQBiEncoder(nn.Module):
-    def __init__(self, vocab_size, d_model=256, n_heads=8, num_layers=4, dropout=0.1):
+    def __init__(self, vocab_size, d_model=256, n_heads=8, num_layers=4, dropout=0.1, temperature=0.07):
         super().__init__()
+
+        self.temperature = temperature
 
         self.encoder=TransformerEncoder(
             vocab_size,
@@ -88,4 +90,4 @@ class MCQBiEncoder(nn.Module):
             options,
             dim=-1
         )
-        return scores
+        return scores/self.temperature
