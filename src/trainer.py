@@ -46,6 +46,7 @@ class MCQTrainer:
         self.scheduler = scheduler
         self.wandb_run = wandb_run
         self.checkpoint_path = checkpoint_path
+        self.globalStep=0
 
     def train_epoch(self, loader):
         self.model.train()
@@ -59,7 +60,17 @@ class MCQTrainer:
             labels = batch["labels"].to(self.device)
 
             self.optimizer.zero_grad()
+            self.global_step += 1
 
+            current_lr = self.optimizer.param_groups[0]["lr"]
+
+            self.wandb_run.log(
+                {
+                    "train_loss": loss.item(),
+                    "learning_rate": current_lr,
+                },
+                step=self.global_step,
+            )
             scores = self.model(
                 q_ids,
                 q_mask,
@@ -144,7 +155,6 @@ class MCQTrainer:
 
     def fit(self, train_loader, val_loader, epochs):
         best_map = 0
-
         for epoch in range(epochs):
             print(f"\nEpoch {epoch + 1}/{epochs}")
 
@@ -163,14 +173,15 @@ MAP@3      : {val_metrics['MAP@3']:.4f}
 """
             )
             current_lr = self.optimizer.param_groups[0]["lr"]
-            self.wandb_run.log({
-                "epoch": epoch + 1,
-                "learning_rate": current_lr,
-                "train_loss": train_loss,
-                "val_loss": val_metrics["loss"],
-                "accuracy": val_metrics["accuracy"],
-                "MAP@3": val_metrics["MAP@3"],
-            })
+            self.wandb_run.log(
+                {
+                    "epoch": epoch + 1,
+                    "val_loss": val_metrics["loss"],
+                    "accuracy": val_metrics["accuracy"],
+                    "MAP@3": val_metrics["MAP@3"],
+                },
+                step=self.global_step,
+            )
 
             if val_metrics["MAP@3"] > best_map:
                 best_map = val_metrics["MAP@3"]
