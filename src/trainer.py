@@ -64,13 +64,6 @@ class MCQTrainer:
 
             current_lr = self.optimizer.param_groups[0]["lr"]
 
-            self.wandb_run.log(
-                {
-                    "train_loss": loss.item(),
-                    "learning_rate": current_lr,
-                },
-                step=self.global_step,
-            )
             scores = self.model(
                 q_ids,
                 q_mask,
@@ -79,6 +72,15 @@ class MCQTrainer:
             )
 
             loss = self.criterion(scores, labels)
+
+            self.wandb_run.log(
+                {
+                    "train_loss": loss.item(),
+                    "learning_rate": current_lr,
+                },
+                step=self.global_step,
+            )
+
             loss.backward()
             self.optimizer.step()
 
