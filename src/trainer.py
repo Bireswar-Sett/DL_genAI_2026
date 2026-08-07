@@ -1,6 +1,7 @@
 import torch
 from tqdm import tqdm
-from transformers import Trainer, TrainingArguments
+import wandb
+from transformers import Trainer, TrainingArguments, TrainerCallback
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 
@@ -8,6 +9,30 @@ class PredictionResult:
     def __init__(self, predictions):
         self.predictions = predictions
 
+
+class WandbMetricsCallback(TrainerCallback):
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if logs is None or not wandb.run:
+            return
+
+        if "loss" in logs and "epoch" in logs and "eval_loss" not in logs:
+            wandb.log({
+                "epoch": logs.get("epoch"),
+                "learning_rate": logs.get("learning_rate"),
+                "train_loss": logs.get("loss"),
+            }, step=state.global_step)
+
+    def on_evaluate(self, args, state, control, metrics=None, **kwargs):
+        if metrics is None or not wandb.run:
+            return
+
+        wandb.log({
+            "epoch": state.epoch,
+            "learning_rate": metrics.get("learning_rate"),
+            "val_loss": metrics.get("eval_loss"),
+            "accuracy": metrics.get("eval_accuracy"),
+            "MAP@3": metrics.get("eval_MAP@3"),
+        }, step=state.global_step)
 
 class MCQTrainer:
     def __init__(
@@ -192,5 +217,6 @@ def build_pretrained_trainer(model, train_dataset, val_dataset, training_args, c
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
         compute_metrics=compute_metrics,
+        callbacks=[WandbMetricsCallback()],
     )
 
