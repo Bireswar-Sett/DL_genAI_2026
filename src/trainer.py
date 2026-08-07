@@ -46,7 +46,7 @@ class MCQTrainer:
         self.scheduler = scheduler
         self.wandb_run = wandb_run
         self.checkpoint_path = checkpoint_path
-        self.globalStep=0
+        self.global_step=0
 
     def train_epoch(self, loader):
         self.model.train()
