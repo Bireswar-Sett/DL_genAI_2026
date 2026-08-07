@@ -137,12 +137,14 @@ Accuracy   : {val_metrics['accuracy']:.4f}
 MAP@3      : {val_metrics['MAP@3']:.4f}
 """
             )
+            current_lr = self.optimizer.param_groups[0]["lr"]
             self.wandb_run.log({
-                "custom/epoch": epoch + 1,
-                "custom/train_loss": train_loss,
-                "custom/val_loss": val_metrics["loss"],
-                "custom/accuracy": val_metrics["accuracy"],
-                "custom/map3": val_metrics["MAP@3"],
+                "epoch": epoch + 1,
+                "learning_rate": current_lr,
+                "train_loss": train_loss,
+                "val_loss": val_metrics["loss"],
+                "accuracy": val_metrics["accuracy"],
+                "MAP@3": val_metrics["MAP@3"],
             })
 
             if val_metrics["MAP@3"] > best_map:
