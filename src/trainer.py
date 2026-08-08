@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from tqdm import tqdm
 import wandb
@@ -232,4 +233,17 @@ def build_pretrained_trainer(model, train_dataset, val_dataset, training_args, c
         compute_metrics=compute_metrics,
         callbacks=[WandbMetricsCallback()],
     )
+
+
+def predict_dataset(trainer, dataset):
+    """Predict labels for a dataset using a HuggingFace Trainer."""
+    trainer.model.eval()
+    predictions = trainer.predict(dataset)
+    logits = predictions.predictions
+    if isinstance(logits, tuple):
+        logits = logits[0]
+
+    preds = np.argmax(logits, axis=1)
+    labels = predictions.label_ids
+    return preds, labels, logits
 
