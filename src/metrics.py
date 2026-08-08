@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.metrics import f1_score
 
 
 def map3_metric(eval_pred):
@@ -17,4 +18,5 @@ def map3_metric(eval_pred):
     return {
         "MAP@3": np.mean(scores),
         "accuracy": np.mean(np.argmax(logits, axis=1) == labels),
+        "F1": f1_score(labels, prediction, average="macro", zero_division=0)
     }

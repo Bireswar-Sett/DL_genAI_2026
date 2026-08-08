@@ -4,6 +4,7 @@ from tqdm import tqdm
 import wandb
 from transformers import Trainer, TrainingArguments, TrainerCallback
 from torch.optim.lr_scheduler import CosineAnnealingLR
+from sklearn.metrics import f1_score
 
 
 class PredictionResult:
@@ -33,7 +34,7 @@ class WandbMetricsCallback(TrainerCallback):
             "val_loss": metrics.get("eval_loss"),
             "accuracy": metrics.get("eval_accuracy"),
             "MAP@3": metrics.get("eval_MAP@3"),
-        }, step=state.global_step)
+            "F1": metrics.get("eval_F1"),}, step=state.global_step)
 
 class MCQTrainer:
     def __init__(
@@ -96,6 +97,8 @@ class MCQTrainer:
         correct = 0
         total = 0
         map3_score = 0
+        all_preds = []
+        all_labels = []
 
         with torch.no_grad():
             for batch in tqdm(loader):
@@ -119,6 +122,9 @@ class MCQTrainer:
                 correct += (preds == labels).sum().item()
                 total += labels.size(0)
 
+                all_preds.extend(preds.cpu().numpy())
+                all_labels.extend(labels.cpu().numpy())
+
                 top3 = torch.topk(scores, k=3, dim=1).indices
 
                 for pred, label in zip(top3, labels):
@@ -129,10 +135,12 @@ class MCQTrainer:
                         rank = pred.index(label) + 1
                         map3_score += 1 / rank
 
+        f1 = f1_score(all_labels, all_preds, average="macro", zero_division=0)
         return {
             "loss": total_loss / len(loader),
             "accuracy": correct / total,
             "MAP@3": map3_score / total,
+            "F1": f1,
         }
 
     def predict(self, loader):
@@ -170,18 +178,20 @@ class MCQTrainer:
 
             print(
                 f"""
-Val Loss   : {val_metrics['loss']:.4f}
-Accuracy   : {val_metrics['accuracy']:.4f}
-MAP@3      : {val_metrics['MAP@3']:.4f}
-"""
+                Val Loss   : {val_metrics['loss']:.4f}
+                Accuracy   : {val_metrics['accuracy']:.4f}
+                F1         : {val_metrics['F1']:.4f}
+                MAP@3      : {val_metrics['MAP@3']:.4f}
+                """
             )
-            current_lr = self.optimizer.param_groups[0]["lr"]
+
             self.wandb_run.log(
                 {
                     "epoch": epoch + 1,
                     "val_loss": val_metrics["loss"],
                     "accuracy": val_metrics["accuracy"],
                     "MAP@3": val_metrics["MAP@3"],
+                    "F1": val_metrics["F1"],
                 },
                 step=self.global_step,
             )
@@ -223,7 +233,6 @@ def build_training_args(
 def build_custom_scheduler(optimizer, epochs):
     return CosineAnnealingLR(optimizer, T_max=epochs)
 
-
 def build_pretrained_trainer(model, train_dataset, val_dataset, training_args, compute_metrics):
     return Trainer(
         model=model,
@@ -234,9 +243,7 @@ def build_pretrained_trainer(model, train_dataset, val_dataset, training_args, c
         callbacks=[WandbMetricsCallback()],
     )
 
-
 def predict_dataset(trainer, dataset):
-    """Predict labels for a dataset using a HuggingFace Trainer."""
     trainer.model.eval()
     predictions = trainer.predict(dataset)
     logits = predictions.predictions
@@ -246,4 +253,3 @@ def predict_dataset(trainer, dataset):
     preds = np.argmax(logits, axis=1)
     labels = predictions.label_ids
     return preds, labels, logits
-
